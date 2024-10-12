@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace API
 {
+    // TODO: Implement Repository Pattern
     [Route("api/v1/[controller]")]
     [ApiController]
     public class QuestionsController(ForumContext context) : ControllerBase
