@@ -1,21 +1,18 @@
-using System.IO.Compression;
 using Core.Entities;
-using Infrastructure.Data;
-using Microsoft.AspNetCore.Http;
+using Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
-namespace API
+namespace API.Controllers
 {
     // TODO: Implement Repository Pattern
     [Route("api/v1/[controller]")]
     [ApiController]
-    public class QuestionsController(ForumContext context) : ControllerBase
+    public class QuestionsController(IQuestionRepository repo) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<Question>>> GetQuestions()
         {
-            var users = await context.Questions.ToListAsync();
+            var users = await repo.GetQuestionsAsync();
             if (users == null)
             {
                 return NoContent();
@@ -28,7 +25,7 @@ namespace API
         [Route("{id:int}")]
         public async Task<ActionResult<Question>> GetQuestion(int id)
         {
-            var question = await context.Questions.FirstOrDefaultAsync(x => x.Id == id);
+            var question = await repo.GetQuestionByIdAsync(id);
             if (question == null)
             {
                 return NotFound();
@@ -37,24 +34,28 @@ namespace API
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateQuestion([FromBody] Question question)
+        public async Task<ActionResult> AddQuestion([FromBody] Question question)
         {
             if (question == null)
             {
                 return BadRequest();
             }
-            await context.Questions.AddAsync(question);
-            await context.SaveChangesAsync();
-            return Ok();
+            repo.AddQuestion(question);
+            if (await repo.SaveChangesAsync())
+            {
+
+                return Ok();
+            }
+            return BadRequest();
         }
 
         [HttpPatch]
         [Route("{id:int}")]
-        public async Task<ActionResult> EditQuestion(int id, [FromBody] Question question)
+        public async Task<ActionResult> UpdateQuestion(int id, [FromBody] Question question)
         {
             question.Id = id;
-            context.Questions.Entry(question).State = EntityState.Modified;
-            if (await context.SaveChangesAsync() > 0)
+            repo.UpdateQuestion(question);
+            if (await repo.SaveChangesAsync())
             {
                 return Ok();
             }
@@ -64,13 +65,13 @@ namespace API
         [HttpDelete("{id:int}")]
         public async Task<ActionResult> DeleteQuestion(int id)
         {
-            var question = await context.Questions.FirstOrDefaultAsync(x => x.Id == id);
+            var question = await repo.GetQuestionByIdAsync(id);
             if (question == null)
             {
                 return NotFound();
             }
-            context.Questions.Remove(question);
-            if (await context.SaveChangesAsync() > 0)
+            repo.DeleteQuestion(question);
+            if (await repo.SaveChangesAsync())
             {
                 return NoContent();
             }
